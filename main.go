@@ -3,6 +3,8 @@ package main
 import (
 	"database/sql"
 	"log"
+	"os"
+	"path/filepath"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -11,27 +13,36 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
-	_ "github.com/glebarez/go-sqlite"
-	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 var db *sql.DB
 
 func openDatabase() (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", "library.db")
+	// Uygulamanın çalışma dizini alınır
+	currentDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
 		log.Fatal(err)
 	}
-	return db, nil
+
+	// SQLite veritabanı dosya yolu oluşturulur
+	dbPath := filepath.Join(currentDir, "library.db")
+
+	// Veritabanını aç
+	conn, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return conn, nil
 }
 
 func createTable() error {
 	_, err := db.Exec(`
- 		CREATE TABLE IF NOT EXISTS books (
- 			id INTEGER PRIMARY KEY AUTOINCREMENT,
- 			book_barcode_number TEXT
- 			days TEXT
+		CREATE TABLE IF NOT EXISTS books (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			book_barcode_number TEXT,
+			days TEXT
 		);
 	`)
 	return err
@@ -59,9 +70,6 @@ func main() {
 	myApp := app.New()
 	myWindow := myApp.NewWindow("Kütüphane")
 	myWindow.Resize(fyne.NewSize(300, 400))
-	// if err := os.Chdir(myApp.Storage().RootURI().Path()); err != nil {
-	// 	log.Fatal(err)
-	// }
 
 	var err error
 	db, err = openDatabase()
